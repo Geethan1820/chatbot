@@ -1,0 +1,7 @@
+flask
+pandas
+matplotlib
+PyPDF2
+requests
+beautifulsoup4
+openpyxl
