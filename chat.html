@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChatWithMe</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #0a0a23;
+      color: white;
+    }
+    body.light {
+      background-color: #f2f2f2;
+      color: black;
+    }
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 260px;
+      background-color: #222;
+      padding: 20px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    body.light .sidebar {
+      background-color: #ddd;
+    }
+    .sidebar button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      background-color: #111;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    body.light .chat-header {
+      background-color: #ccc;
+      color: black;
+    }
+    .chat-body {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 15px;
+    }
+    .message.user {
+      text-align: right;
+    }
+    .message.bot {
+      text-align: left;
+    }
+    .message-box {
+      display: inline-block;
+      padding: 10px 15px;
+      border-radius: 8px;
+      max-width: 80%;
+      background-color: #444;
+      position: relative;
+    }
+    .message-box pre {
+      background-color: #222;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      position: relative;
+      color: #00ffea;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 3px 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background-color: #111;
+      align-items: center;
+    }
+    .input-area input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      background-color: #222;
+      color: white;
+    }
+    .input-area button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      border: none;
+      background-color: #555;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .file-preview {
+      font-size: 0.9em;
+      margin: 5px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .file-chip {
+      background-color: #333;
+      padding: 6px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+    }
+    .file-chip span {
+      margin-right: 8px;
+    }
+    .file-chip button {
+      background: none;
+      border: none;
+      color: red;
+      cursor: pointer;
+    }
+    .chat-item {
+      display: flex;
+      justify-content: space-between;
+      background: #2a2a2a;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .chat-item:hover {
+      background: #3a3a3a;
+    }
+    .chat-item span {
+      flex: 1;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ff5c5c;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .analytics-img {
+      width: 320px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+.chat-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rename-input {
+  flex: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: none;
+  background-color: #444;
+  color: white;
+  font-size: 14px;
+  width: 100%;
+}
+
+.action-btn {
+  background-color: #444;
+  border: none;
+  color: #fff;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.action-btn:hover {
+  background-color: #666;
+}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <button onclick="newChat()">➕ New Chat</button>
+      <button onclick="toggleTheme()">🌓 Toggle</button>
+      <button onclick="toggleTools()">🛠 Tools</button>
+      <div id="toolsMenu" style="display:none;">
+        <button onclick="startDataAnalytics()">📊 Data Analytics</button>
+      </div>
+      <h3>Chat History</h3>
+      <div id="historyBox"></div>
+    </div>
+    <div class="main">
+      <div class="chat-header">
+        <h1>ChatWithMe 🤖</h1>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+      <div class="file-preview" id="fileStatus"></div>
+      <div class="input-area">
+        <button onclick="document.getElementById('fileInput').click()">📎</button>
+        <input type="file" id="fileInput" style="display:none" multiple onchange="uploadFiles(event)">
+        <input type="text" id="userInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBody = document.getElementById("chatBody");
+    const userInput = document.getElementById("userInput");
+    const fileStatus = document.getElementById("fileStatus");
+    const historyBox = document.getElementById("historyBox");
+
+    let uploadedFiles = [];
+    let uploadedFileContent = "";
+    let currentChat = [];
+    let chatHistory = [];
+    let dataAnalyticsActive = false;
+    let isExpectingDataAnalyticsUpload = false;
+    let chatCount = 0;
+
+    function toggleTheme() {
+      document.body.classList.toggle("light");
+    }
+
+    function toggleTools() {
+      const tools = document.getElementById("toolsMenu");
+      tools.style.display = tools.style.display === "none" ? "block" : "none";
+    }
+
+    function formatMarkdown(mdText) {
+      mdText = mdText.replace(/\\n/g, "\n").replace(/\\u0026/g, "&");
+      const html = marked.parse(mdText);
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      container.querySelectorAll("pre code").forEach(block => {
+        const pre = block.parentElement;
+        const copyBtn = document.createElement("button");
+        copyBtn.innerText = "Copy";
+        copyBtn.className = "copy-btn";
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(block.innerText);
+          copyBtn.innerText = "Copied!";
+          setTimeout(() => (copyBtn.innerText = "Copy"), 1500);
+        };
+        pre.appendChild(copyBtn);
+      });
+      return container;
+    }
+
+    function addMessage(text, fromUser) {
+      const msg = document.createElement("div");
+      msg.className = "message " + (fromUser ? "user" : "bot");
+      const box = document.createElement("div");
+      box.className = "message-box";
+      if (fromUser) {
+        box.innerText = text;
+      } else {
+        box.appendChild(formatMarkdown(text));
+      }
+      msg.appendChild(box);
+      chatBody.appendChild(msg);
+      chatBody.scrollTop = chatBody.scrollHeight;
+      currentChat.push({ text, fromUser });
+      return box;
+    }
+
+    async function sendMessage() {
+      const msg = userInput.value.trim();
+      if (!msg) return;
+      addMessage(msg, true);
+      userInput.value = "";
+
+      if (dataAnalyticsActive) {
+        if (msg.toLowerCase().includes("thank you")) {
+          dataAnalyticsActive = false;
+          addMessage("🙏 You're welcome! Exiting Data Analytics mode.", false);
+          setTimeout(() => {
+            newChat();
+            addMessage("💬 You can start a new chat now.", false);
+          }, 3000);
+          return;
+        }
+        await sendChartTypeInput(msg);
+        return;
+      }
+
+      const loadingBox = addMessage("Analyzing...", false);
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, file_content: uploadedFileContent })
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let result = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        result += chunk;
+        const formatted = formatMarkdown(result);
+        loadingBox.innerHTML = "";
+        loadingBox.appendChild(formatted);
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+
+      currentChat.push({ text: result, fromUser: false });
+    }
+
+    function uploadFiles(event) {
+      const files = Array.from(event.target.files);
+      const formData = new FormData();
+      files.forEach(file => formData.append("files[]", file));
+
+      fetch("/upload", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => {
+          uploadedFiles = files;
+          uploadedFileContent = data.content;
+          renderUploadedFiles(data.filenames);
+
+          if (isExpectingDataAnalyticsUpload) {
+            addMessage("✅ Your file is uploaded.\nPlease enter:\n1️⃣ for Pie Chart\n2️⃣ for Line Chart\n3️⃣ for Bar Chart\nTo exit, type THANK YOU.", false);
+            dataAnalyticsActive = true;
+            isExpectingDataAnalyticsUpload = false;
+          } else {
+            addMessage("✅ File uploaded. You can now ask questions about it.", false);
+          }
+        })
+        .catch(() => alert("Upload failed"));
+    }
+
+    function renderUploadedFiles(filenames) {
+      fileStatus.innerHTML = "";
+      filenames.forEach((name, index) => {
+        const chip = document.createElement("div");
+        chip.className = "file-chip";
+        const span = document.createElement("span");
+        span.innerText = name;
+        const btn = document.createElement("button");
+        btn.innerText = "🗙";
+        btn.onclick = () => {
+          uploadedFiles.splice(index, 1);
+          chip.remove();
+        };
+        chip.appendChild(span);
+        chip.appendChild(btn);
+        fileStatus.appendChild(chip);
+      });
+    }
+
+    function startDataAnalytics() {
+      newChat();
+      addMessage("📊 Welcome! Please upload a CSV or Excel file to begin analysis.", false);
+      isExpectingDataAnalyticsUpload = true;
+    }
+
+    async function sendChartTypeInput(type) {
+      const loadingBox = addMessage("⏳ Generating chart...", false);
+      const formData = new FormData();
+      formData.append("chart_type", type.trim());
+      formData.append("file", uploadedFiles[0]);
+
+      try {
+        const res = await fetch("/visualize", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        loadingBox.remove();
+
+        if (data.img_url) {
+          addMessage(`<img src="${data.img_url}" class="analytics-img" /><br><a href="${data.img_url}" download>⬇️ Download Chart</a>`, false);
+        } else {
+          addMessage("⚠️ Chart generation failed. Please try again.", false);
+        }
+      } catch (err) {
+        loadingBox.remove();
+        addMessage("❌ Error generating chart. Please try again.", false);
+      }
+    }
+
+   function newChat() {
+  if (currentChat.length > 0) {
+    const title = currentChat.find(m => m.fromUser)?.text || `Chat ${chatCount + 1}`;
+    chatHistory.unshift({ title, messages: [...currentChat] });
+  }
+
+  chatCount += 1;
+  const newTitle = `Chat ${chatCount}`;
+  addToHistory(chatCount, newTitle);
+
+  currentChat = [];
+  uploadedFiles = [];
+  uploadedFileContent = "";
+  chatBody.innerHTML = "";
+  fileStatus.innerHTML = "";
+  addMessage(`💬 Started ${newTitle}`, false);
+}
+
+
+    function addToHistory(id, title) {
+  const item = document.createElement("div");
+  item.className = "chat-item";
+  item.dataset.id = id;
+
+  const titleSpan = document.createElement("span");
+  titleSpan.textContent = title;
+  titleSpan.className = "chat-title";
+
+  const buttonBox = document.createElement("div");
+  buttonBox.style.display = "flex";
+  buttonBox.style.gap = "6px";
+
+  const renameBtn = document.createElement("button");
+  renameBtn.className = "action-btn";
+  renameBtn.textContent = "📝";
+  renameBtn.onclick = (e) => {
+    e.stopPropagation();
+    const input = document.createElement("input");
+    input.value = titleSpan.textContent;
+    input.className = "rename-input";
+    item.replaceChild(input, titleSpan);
+    input.focus();
+
+    const save = () => {
+      if (input.value.trim()) {
+        titleSpan.textContent = input.value.trim();
+        const index = chatHistory.findIndex(h => h.title === title);
+        if (index !== -1) chatHistory[index].title = input.value.trim();
+        item.replaceChild(titleSpan, input);
+      }
+    };
+
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") save();
+    };
+    input.onblur = save;
+  };
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "action-btn";
+  delBtn.textContent = "🗑";
+  delBtn.onclick = (e) => {
+    e.stopPropagation();
+    item.remove();
+    chatHistory = chatHistory.filter((_, idx) => idx !== id - 1);
+  };
+
+  item.onclick = () => {
+    chatBody.innerHTML = "";
+    const selectedChat = chatHistory.find(h => h.title === titleSpan.textContent);
+    if (selectedChat) {
+      selectedChat.messages.forEach(m => addMessage(m.text, m.fromUser));
+      currentChat = [...selectedChat.messages];
+    }
+  };
+
+  buttonBox.appendChild(renameBtn);
+  buttonBox.appendChild(delBtn);
+  item.appendChild(titleSpan);
+  item.appendChild(buttonBox);
+  historyBox.prepend(item);
+}
+userInput.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+
+  </script>
+</body>
+</html>
